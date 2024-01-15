@@ -1,30 +1,26 @@
 #!/usr/bin/env python
 
 import sys
-import os
-import inspect
+import json
 
 from versatus_python import versatus_python 
+
+JSON_INDENTATION_LEVEL = 4 
 
 def main():
     inputs = versatus_python.ComputeInputs.gather()
 
-    # Do contract stuff to generate proposed transactions
-    transactions = []
-    amount_each = inputs.application_input.amount // len(inputs.application_input.recipients)
-    for recipient in inputs.application_input.recipients:
-        txn = versatus_python.ComputeTransaction()
-        txn.recipient = recipient
-        txn.amount = amount_each
-        transactions.append(txn)
+    print(json.dumps(inputs.to_json(), indent=JSON_INDENTATION_LEVEL))
+
+    # Convert value to integer
+    value = int(inputs.application_input.contract_input.function_inputs.transfer.value, 16)
+
 
     # Create output object containing proposed transactions
     output = versatus_python.ComputeOutputs()
-    output.transactions = transactions
 
     # Write the smart contract results/transactions to stdout
-    output.commit()
+    # output.commit()
 
 if __name__ == "__main__":
     main()
-

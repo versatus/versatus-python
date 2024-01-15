@@ -1,12 +1,9 @@
 import json
 import sys
-from typing import List
 
 class ApplicationInputs:
     def __init__(self):
-        self.contract_fn = ""
-        self.amount = 0
-        self.recipients = []
+        self.contract_input = ContractInput()
 
 class ProtocolInputs:
     def __init__(self):
@@ -19,6 +16,20 @@ class AccountInfo:
         self.account_address = ""
         self.account_balance = 0
 
+class ContractInput:
+    def __init__(self):
+        self.contract_fn = ""
+        self.function_inputs = ERC20FunctionInputs()
+
+class ERC20FunctionInputs:
+    def __init__(self):
+        self.transfer = ERC20TransferInputs()
+
+class ERC20TransferInputs:
+    def __init__(self):
+        self.value = 0
+        self.address = ""
+
 versionStr = "version"
 accountInfoStr = "accountInfo"
 accountAddressStr = "accountAddress"
@@ -26,10 +37,13 @@ accountBalanceStr = "accountBalance"
 protocolInputStr = "protocolInput"
 blockHeightStr = "blockHeight"
 blockTimeStr = "blockTime"
-applicationInputStr = "applicationInput"
+contractInputStr = "contractInput"
 contractFnStr = "contractFn"
-amountStr = "amount"
-recipientsStr = "recipients"
+functionInputsStr = "functionInputs"
+erc20Str = "erc20"
+transferStr = "transfer"
+valueStr = "value"
+addressStr = "address"
 
 class ComputeInputs:
     def __init__(self):
@@ -39,12 +53,7 @@ class ComputeInputs:
         self.application_input = ApplicationInputs()
 
     @staticmethod
-    def gather():
-        json_data = sys.stdin.read()
-        json_obj = json.loads(json_data)
-
-        # print(json_obj)
-
+    def from_json(json_obj):
         inputs = ComputeInputs()
 
         inputs.version = json_obj[versionStr]
@@ -53,14 +62,48 @@ class ComputeInputs:
         inputs.protocol_input.version = json_obj[protocolInputStr][versionStr]
         inputs.protocol_input.block_height = json_obj[protocolInputStr][blockHeightStr]
         inputs.protocol_input.block_time = json_obj[protocolInputStr][blockTimeStr]
-        inputs.application_input.contract_fn = json_obj[applicationInputStr][contractFnStr]
-        inputs.application_input.amount = json_obj[applicationInputStr][amountStr]
-        inputs.application_input.recipients = json_obj[applicationInputStr][recipientsStr]
 
-        # print("inputs.application_input.amount:", inputs.application_input.amount)
+        contract_input = json_obj[contractInputStr]
+        inputs.application_input.contract_input.contract_fn = contract_input[contractFnStr]
+        erc20_function_inputs = contract_input[functionInputsStr][erc20Str][transferStr]
+        inputs.application_input.contract_input.function_inputs.transfer.value = erc20_function_inputs[valueStr]
+        inputs.application_input.contract_input.function_inputs.transfer.address = erc20_function_inputs[addressStr]
 
         return inputs
 
+    @staticmethod
+    def gather():
+        json_data = sys.stdin.read()
+        json_obj = json.loads(json_data)
+
+        inputs = ComputeInputs.from_json(json_obj)
+
+        return inputs
+
+    def to_json(self):
+        return {
+            versionStr: self.version,
+            accountInfoStr: {
+                accountAddressStr: self.account_info.account_address,
+                accountBalanceStr: self.account_info.account_balance
+            },
+            protocolInputStr: {
+                versionStr: self.protocol_input.version,
+                blockHeightStr: self.protocol_input.block_height,
+                blockTimeStr: self.protocol_input.block_time
+            },
+            contractInputStr: {
+                contractFnStr: self.application_input.contract_input.contract_fn,
+                functionInputsStr: {
+                    erc20Str: {
+                        transferStr: {
+                            valueStr: self.application_input.contract_input.function_inputs.transfer.value,
+                            addressStr: self.application_input.contract_input.function_inputs.transfer.address
+                        }
+                    }
+                }
+            }
+        }
 class ComputeTransaction:
     def __init__(self):
         self.recipient = ""
