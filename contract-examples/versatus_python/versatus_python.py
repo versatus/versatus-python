@@ -1,5 +1,9 @@
 import json
 import sys
+from web3 import Web3
+
+from Crypto.Util.number import bytes_to_long
+
 
 class ApplicationInputs:
     def __init__(self):
@@ -57,8 +61,22 @@ class ComputeInputs:
         inputs = ComputeInputs()
 
         inputs.version = json_obj[versionStr]
-        inputs.account_info.account_address = json_obj[accountInfoStr][accountAddressStr]
-        inputs.account_info.account_balance = json_obj[accountInfoStr][accountBalanceStr]
+
+        # Validate and read Ethereum address
+        account_address = json_obj[accountInfoStr][accountAddressStr]
+        if Web3.is_address(account_address):
+            inputs.account_info.account_address = account_address
+        else:
+            raise ValueError("Invalid Ethereum address format")
+
+        # Validate and convert account balance to a 256-bit integer
+        account_balance_hex = json_obj[accountInfoStr][accountBalanceStr]
+        try:
+            inputs.account_info.account_balance = bytes_to_long(bytes.fromhex(account_balance_hex[2:]))
+        except ValueError:
+            raise ValueError("Invalid account balance format")
+
+
         inputs.protocol_input.version = json_obj[protocolInputStr][versionStr]
         inputs.protocol_input.block_height = json_obj[protocolInputStr][blockHeightStr]
         inputs.protocol_input.block_time = json_obj[protocolInputStr][blockTimeStr]
